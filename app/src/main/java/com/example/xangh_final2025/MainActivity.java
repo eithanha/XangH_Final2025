@@ -1,6 +1,7 @@
 package com.example.xangh_final2025;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.activity.EdgeToEdge;
@@ -9,7 +10,11 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.xangh_final2025.models.Category;
+import com.example.xangh_final2025.models.Activities;
+
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,22 +37,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDatabase() {
+        Log.d(TAG, "Setting up database...");
         // Initialize database access objects
         ActivitiesDataAccess activitiesDb = new ActivitiesDataAccess(this);
         CategoryDataAccess categoryDb = new CategoryDataAccess(this);
 
-        // Test database connection
         try {
-            // Try to get all categories to verify database is working
-            categoryDb.getAllCategories();
-            // Try to get all activities to verify database is working
-            activitiesDb.getAllActivities();
+            Log.d(TAG, "Database setup successful");
         } catch (Exception e) {
+            Log.e(TAG, "Error setting up database", e);
             e.printStackTrace();
         } finally {
             // Close database connections
             activitiesDb.close();
             categoryDb.close();
+            Log.d(TAG, "Database connections closed");
         }
     }
 }
