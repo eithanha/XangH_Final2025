@@ -1,9 +1,12 @@
-package com.example.xangh_final2025;
+package com.example.xangh_final2025.database_helper;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+
+import com.example.xangh_final2025.data_access.ActivitiesDataAccess;
+import com.example.xangh_final2025.data_access.CategoryDataAccess;
 
 public class MySQLiteHelper extends SQLiteOpenHelper {
     public static final String TAG = "MySQLiteHelper";
@@ -18,8 +21,6 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         String activitiesDb = ActivitiesDataAccess.CREATE_TABLE;
         String categoryDb = CategoryDataAccess.CREATE_TABLE;
         Log.d(TAG, "Creating DataBase");
-        //db.execSQL(ActivitiesDataAccess.CREATE_TABLE);
-        //db.execSQL(CategoryDataAccess.CREATE_TABLE);
         db.execSQL(activitiesDb);
         db.execSQL(categoryDb);
         Log.d(TAG, ActivitiesDataAccess.CREATE_TABLE);

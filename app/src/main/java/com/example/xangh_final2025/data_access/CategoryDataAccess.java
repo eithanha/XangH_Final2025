@@ -1,4 +1,4 @@
-package com.example.xangh_final2025;
+package com.example.xangh_final2025.data_access;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
+import com.example.xangh_final2025.database_helper.MySQLiteHelper;
 import com.example.xangh_final2025.models.Category;
 
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ public class CategoryDataAccess {
         this.database = this.dbHelper.getWritableDatabase();
     }
 
-    // Insert a new category
+    
     public Category insertCategory(Category category) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_NAME, category.getName());
@@ -50,20 +51,20 @@ public class CategoryDataAccess {
         return null;
     }
 
-    // Get all categories
+    
     public List<Category> getAllCategories() {
         List<Category> categories = new ArrayList<>();
         String query = "SELECT " + COLUMN_ID + ", " + COLUMN_NAME + 
                       " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_NAME + " ASC";
 
-        try (Cursor cursor = database.rawQuery(query, null)) {
-            if (cursor != null && cursor.getCount() > 0) {
-                cursor.moveToFirst();
-                while (!cursor.isAfterLast()) {
-                    int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID));
-                    String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NAME));
+        try (Cursor c = database.rawQuery(query, null)) {
+            if (c != null && c.getCount() > 0) {
+                c.moveToFirst();
+                while (!c.isAfterLast()) {
+                    int id = c.getInt(c.getColumnIndexOrThrow(COLUMN_ID));
+                    String name = c.getString(c.getColumnIndexOrThrow(COLUMN_NAME));
                     categories.add(new Category(id, name));
-                    cursor.moveToNext();
+                    c.moveToNext();
                 }
             }
         } catch (Exception e) {
@@ -73,15 +74,15 @@ public class CategoryDataAccess {
         return categories;
     }
 
-    // Get category by ID
+    
     public Category getCategoryById(int id) {
         Category category = null;
         String query = "SELECT " + COLUMN_ID + ", " + COLUMN_NAME + 
                       " FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + " = ?";
 
-        try (Cursor cursor = database.rawQuery(query, new String[]{String.valueOf(id)})) {
-            if (cursor.moveToFirst()) {
-                String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NAME));
+        try (Cursor c = database.rawQuery(query, new String[]{String.valueOf(id)})) {
+            if (c.moveToFirst()) {
+                String name = c.getString(c.getColumnIndexOrThrow(COLUMN_NAME));
                 category = new Category(id, name);
             }
         } catch (Exception e) {
@@ -91,7 +92,7 @@ public class CategoryDataAccess {
         return category;
     }
 
-    // Update a category
+    
     public Category updateCategory(Category category) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_NAME, category.getName());
@@ -110,7 +111,7 @@ public class CategoryDataAccess {
         return null;
     }
 
-    // Delete a category
+    
     public boolean deleteCategory(int id) {
         try {
             int rowsDeleted = database.delete(TABLE_NAME, COLUMN_ID + "=?", 
@@ -122,7 +123,7 @@ public class CategoryDataAccess {
         }
     }
 
-    // Close the database connection
+    
     public void close() {
         if (database != null && database.isOpen()) {
             database.close();

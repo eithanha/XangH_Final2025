@@ -1,3 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">XangH_Final2025</string>
+    <string name="toolbar">Toolbar</string>
+    <string name="categorytoolbar">Category Toolbar</string>
+    <string name="floatingActionButton">Floating Button</string>
+    <string name="categories_title">Categories</string>
+    <string name="add_category">Add New Category</string>
+    <string name="clicked_category">Clicked: %1$s</string>
+    <string name="add_category_clicked">Add category clicked</string>
+    <string name="error_category_name_required">Error: Category Name Required</string>
+    <string name="error_category_name_too_long">Error: Category Name is Too Long</string>
+    <string name="error_category_exists">Category Already Exists</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="edit_category">Edit Category</string>
+    <string name="add">Add</string>
+    <string name="category_name">Category Name</string>
+    <string name="category_added_success">Category Added Successfully</string>
+    <string name="category_updated_success">Category Updated Successfully</string>
+    <string name="error_category_add_failed">Failed to Add Category</string>
+    <string name="error_category_update_failed">Failed to Update Category</string>
+    <string name="error_database_operation">Database operation failed</string>
 </resources>

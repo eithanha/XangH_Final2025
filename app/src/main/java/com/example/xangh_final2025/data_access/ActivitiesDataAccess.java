@@ -1,4 +1,4 @@
-package com.example.xangh_final2025;
+package com.example.xangh_final2025.data_access;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
+import com.example.xangh_final2025.database_helper.MySQLiteHelper;
 import com.example.xangh_final2025.models.Activities;
 
 import java.text.ParseException;
