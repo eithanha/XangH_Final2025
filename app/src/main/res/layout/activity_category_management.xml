@@ -6,7 +6,7 @@
     android:layout_height="match_parent">
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/categorytoolbar"
+        android:id="@+id/categoryToolBar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
@@ -19,7 +19,7 @@
         android:layout_height="0dp"
         android:padding="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/categorytoolbar"
+        app:layout_constraintTop_toBottomOf="@id/categoryToolBar"
         tools:itemCount="5"
         tools:itemType="text" />
 

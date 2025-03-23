@@ -33,4 +33,14 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + ActivitiesDataAccess.TABLE_NAME);
         db.execSQL("DROP TABLE IF EXISTS " + CategoryDataAccess.TABLE_NAME);
     }
+
+    public boolean deleteCategory(int categoryId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.delete(CategoryDataAccess.TABLE_NAME, CategoryDataAccess.COLUMN_ID +  " = ?",
+                new String[]{String.valueOf(categoryId)}) > 0;
+    }
+
+    public void deleteDatabase(Context context) {
+        context.deleteDatabase(DATA_BASE_NAME);
+    }
 }

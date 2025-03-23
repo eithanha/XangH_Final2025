@@ -4,8 +4,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
-import java.lang.ref.WeakReference;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,8 +28,6 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
     private CategoryAdapter categoryAdapter;
     private List<Category> categories = new ArrayList<>();
 
-    private MySQLiteHelper dbHelper;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,7 +45,7 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
     }
 
     private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.categorytoolbar);
+        Toolbar toolbar = findViewById(R.id.categoryToolBar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setTitle(R.string.categories_title);
@@ -97,8 +95,12 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
     }
 
     private void showCategoryDialog(Category category, CategoryDialogListener listener) {
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_category, null);
-        TextInputEditText categoryNameInput = dialogView.findViewById(R.id.categoryNameInput);
+        View dialogView = getLayoutInflater().inflate(R.layout.category_input, null);
+        TextInputEditText categoryNameInput = dialogView.findViewById(R.id.categoryName);
+        ImageButton deleteButton = dialogView.findViewById(R.id.deleteButton);
+        
+        deleteButton.setVisibility(category != null ? View.VISIBLE : View.GONE);
+        
         if (category != null) {
             categoryNameInput.setText(category.getName());
         }
@@ -117,6 +119,20 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
                 listener.onCategoryNameEntered(categoryName);
                 dialog.dismiss();
             });
+        });
+
+        deleteButton.setOnClickListener(v -> {
+            if (category != null) {
+                new AlertDialog.Builder(this)
+                    .setTitle(R.string.delete_category)
+                    .setMessage(R.string.confirm_delete_category)
+                    .setPositiveButton(R.string.delete, (dialog1, which) -> {
+                        deleteCategory(category);
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+            }
         });
 
         dialog.show();
@@ -141,11 +157,94 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
     }
 
     private void addCategory(String name) {
-        new AddCategoryTask(this, categoryDb, categories, categoryAdapter).execute(name);
+        new AsyncTask<String, Void, Category>() {
+            @Override
+            protected Category doInBackground(String... params) {
+                Category newCategory = new Category();
+                newCategory.setName(params[0]);
+                return categoryDb.insertCategory(newCategory);
+            }
+
+            @Override
+            protected void onPostExecute(Category result) {
+                if (result != null) {
+                    categories.add(result);
+                    categoryAdapter.notifyItemInserted(categories.size() - 1);
+                    Toast.makeText(CategoryManagementActivity.this,
+                            getString(R.string.category_added_success),
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(CategoryManagementActivity.this,
+                            getString(R.string.error_category_add_failed),
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.execute(name);
     }
 
     private void updateCategory(Category category) {
-        new UpdateCategoryTask(this, categoryDb, categories, categoryAdapter).execute(category);
+        new AsyncTask<Category, Void, Boolean>() {
+            @Override
+            protected Boolean doInBackground(Category... params) {
+                try {
+                    categoryDb.updateCategory(params[0]);
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Boolean success) {
+                if (success) {
+                    int position = findCategoryPosition(category.getId());
+                    if (position != -1) {
+                        categories.set(position, category);
+                        categoryAdapter.notifyItemChanged(position);
+                        Toast.makeText(CategoryManagementActivity.this,
+                                getString(R.string.category_updated_success),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(CategoryManagementActivity.this,
+                            getString(R.string.error_category_update_failed),
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.execute(category);
+    }
+
+    private void deleteCategory(Category category) {
+        new AsyncTask<Category, Void, Boolean>() {
+            @Override
+            protected Boolean doInBackground(Category... params) {
+                try {
+                    return categoryDb.deleteCategory(params[0].getId());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Boolean success) {
+                if (success) {
+                    int position = findCategoryPosition(category.getId());
+                    if (position != -1) {
+                        categories.remove(position);
+                        categoryAdapter.notifyItemRemoved(position);
+                        Toast.makeText(CategoryManagementActivity.this,
+                                getString(R.string.category_deleted_success),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(CategoryManagementActivity.this,
+                            getString(R.string.error_category_delete_failed),
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.execute(category);
     }
 
     private int findCategoryPosition(int categoryId) {
@@ -167,96 +266,5 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
 
     private interface CategoryDialogListener {
         void onCategoryNameEntered(String name);
-    }
-
-    private static class AddCategoryTask extends AsyncTask<String, Void, Category> {
-        private final WeakReference<CategoryManagementActivity> activityReference;
-        private final CategoryDataAccess categoryDb;
-        private final List<Category> categories;
-        private final CategoryAdapter adapter;
-        private String name;
-
-        AddCategoryTask(CategoryManagementActivity activity, CategoryDataAccess categoryDb, 
-                       List<Category> categories, CategoryAdapter adapter) {
-            this.activityReference = new WeakReference<>(activity);
-            this.categoryDb = categoryDb;
-            this.categories = categories;
-            this.adapter = adapter;
-        }
-
-        @Override
-        protected Category doInBackground(String... params) {
-            name = params[0];
-            Category newCategory = new Category();
-            newCategory.setName(name);
-            return categoryDb.insertCategory(newCategory);
-        }
-
-        @Override
-        protected void onPostExecute(Category result) {
-            CategoryManagementActivity activity = activityReference.get();
-            if (activity == null || activity.isFinishing()) return;
-
-            if (result != null) {
-                categories.add(result);
-                adapter.notifyItemInserted(categories.size() - 1);
-                Toast.makeText(activity,
-                        activity.getString(R.string.category_added_success),
-                        Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(activity,
-                        activity.getString(R.string.error_category_add_failed),
-                        Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    private static class UpdateCategoryTask extends AsyncTask<Category, Void, Boolean> {
-        private final WeakReference<CategoryManagementActivity> activityReference;
-        private final CategoryDataAccess categoryDb;
-        private final List<Category> categories;
-        private final CategoryAdapter adapter;
-        private Category category;
-
-        UpdateCategoryTask(CategoryManagementActivity activity, CategoryDataAccess categoryDb,
-                         List<Category> categories, CategoryAdapter adapter) {
-            this.activityReference = new WeakReference<>(activity);
-            this.categoryDb = categoryDb;
-            this.categories = categories;
-            this.adapter = adapter;
-        }
-
-        @Override
-        protected Boolean doInBackground(Category... params) {
-            try {
-                category = params[0];
-                categoryDb.updateCategory(category);
-                return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            CategoryManagementActivity activity = activityReference.get();
-            if (activity == null || activity.isFinishing()) return;
-
-            if (success) {
-                int position = activity.findCategoryPosition(category.getId());
-                if (position != -1) {
-                    categories.set(position, category);
-                    adapter.notifyItemChanged(position);
-                    Toast.makeText(activity,
-                            activity.getString(R.string.category_updated_success),
-                            Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(activity,
-                        activity.getString(R.string.error_category_update_failed),
-                        Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 } 

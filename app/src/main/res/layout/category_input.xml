@@ -11,12 +11,21 @@
         android:hint="@string/category_name">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/categoryNameInput"
+            android:id="@+id/categoryName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text"
             android:maxLength="30" />
 
+        <ImageButton
+            android:id="@+id/deleteButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/delete_category_button"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_delete" />
+
     </com.google.android.material.textfield.TextInputLayout>
 
-</LinearLayout> 
+</LinearLayout>
