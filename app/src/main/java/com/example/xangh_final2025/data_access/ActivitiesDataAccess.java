@@ -66,10 +66,7 @@ public class ActivitiesDataAccess {
     
     public List<Activities> getAllActivities() {
         List<Activities> activities = new ArrayList<>();
-        String query = "SELECT " + COLUMN_ID + ", " + COLUMN_TITLE + ", " + COLUMN_DESCRIPTION + 
-                      ", " + COLUMN_DATE + ", " + COLUMN_STATUS + ", " + COLUMN_CATEGORY_ID +
-                      " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_DATE + " DESC";
-
+        String query = "SELECT * FROM " + TABLE_NAME + " ORDER BY " + COLUMN_DATE + " DESC";
 
         try (Cursor c = database.rawQuery(query, null)) {
             if (c != null && c.getCount() > 0) {
@@ -105,11 +102,9 @@ public class ActivitiesDataAccess {
     
     public Activities getActivityById(int id) {
         Activities activity = null;
-        String query = "SELECT " + COLUMN_ID + ", " + COLUMN_TITLE + ", " + COLUMN_DESCRIPTION + 
-                      ", " + COLUMN_DATE + ", " + COLUMN_STATUS + ", " + COLUMN_CATEGORY_ID +
-                      " FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + " = ?";
+        String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + "=" + id;
 
-        try (Cursor cursor = database.rawQuery(query, new String[]{String.valueOf(id)})) {
+        try (Cursor cursor = database.rawQuery(query, null)) {
             if (cursor.moveToFirst()) {
                 String title = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE));
                 String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION));
@@ -144,8 +139,7 @@ public class ActivitiesDataAccess {
 
         try {
             int rowsUpdated = database.update(TABLE_NAME, values, 
-                COLUMN_ID + "=?", 
-                new String[]{String.valueOf(activity.getId())});
+                COLUMN_ID + "=" + activity.getId(), null);
             
             if (rowsUpdated > 0) {
                 return activity;
@@ -159,7 +153,7 @@ public class ActivitiesDataAccess {
     
     public int deleteActivity(int id) {
         try {
-            return database.delete(TABLE_NAME, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
+            return database.delete(TABLE_NAME, COLUMN_ID + "=" + id, null);
         } catch (SQLiteException e) {
             e.printStackTrace();
             return -1;

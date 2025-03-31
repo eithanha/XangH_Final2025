@@ -54,8 +54,7 @@ public class CategoryDataAccess {
     
     public List<Category> getAllCategories() {
         List<Category> categories = new ArrayList<>();
-        String query = "SELECT " + COLUMN_ID + ", " + COLUMN_NAME + 
-                      " FROM " + TABLE_NAME + " ORDER BY " + COLUMN_NAME + " ASC";
+        String query = "SELECT * FROM " + TABLE_NAME + " ORDER BY " + COLUMN_NAME + " ASC";
 
         try (Cursor c = database.rawQuery(query, null)) {
             if (c != null && c.getCount() > 0) {
@@ -77,10 +76,9 @@ public class CategoryDataAccess {
     
     public Category getCategoryById(int id) {
         Category category = null;
-        String query = "SELECT " + COLUMN_ID + ", " + COLUMN_NAME + 
-                      " FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + " = ?";
+        String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + "=" + id;
 
-        try (Cursor c = database.rawQuery(query, new String[]{String.valueOf(id)})) {
+        try (Cursor c = database.rawQuery(query, null)) {
             if (c.moveToFirst()) {
                 String name = c.getString(c.getColumnIndexOrThrow(COLUMN_NAME));
                 category = new Category(id, name);
@@ -99,8 +97,7 @@ public class CategoryDataAccess {
 
         try {
             int rowsUpdated = database.update(TABLE_NAME, values, 
-                COLUMN_ID + "=?", 
-                new String[]{String.valueOf(category.getId())});
+                COLUMN_ID + "=" + category.getId(), null);
             
             if (rowsUpdated > 0) {
                 return category;
@@ -114,8 +111,7 @@ public class CategoryDataAccess {
     
     public boolean deleteCategory(int id) {
         try {
-            int rowsDeleted = database.delete(TABLE_NAME, COLUMN_ID + "=?", 
-                new String[]{String.valueOf(id)});
+            int rowsDeleted = database.delete(TABLE_NAME, COLUMN_ID + "=" + id, null);
             return rowsDeleted > 0;
         } catch (SQLiteException e) {
             Log.e(TAG, "Error deleting category: " + id, e);

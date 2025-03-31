@@ -59,9 +59,9 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
     }
 
     private void setupFab() {
-        FloatingActionButton fab = findViewById(R.id.floatingActionButton);
-        fab.setContentDescription(getString(R.string.add_category));
-        fab.setOnClickListener(v -> showAddCategoryDialog());
+        ImageButton addButton = findViewById(R.id.addButton);
+        addButton.setContentDescription(getString(R.string.add_category));
+        addButton.setOnClickListener(v -> showAddCategoryDialog());
     }
 
     private void loadCategories() {

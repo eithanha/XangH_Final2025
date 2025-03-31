@@ -3,7 +3,7 @@
     <string name="app_name">XangH_Final2025</string>
     <string name="toolbar">Toolbar</string>
     <string name="categorytoolbar">Category Toolbar</string>
-    <string name="floatingActionButton">Floating Button</string>
+    <string name="addButton">Add Button</string>
     <string name="categories_title">Categories</string>
     <string name="add_category">Add New Category</string>
     <string name="clicked_category">Clicked: %1$s</string>
