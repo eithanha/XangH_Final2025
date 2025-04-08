@@ -15,10 +15,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ActivitiesDataAccess {
     private static final String TAG = "ActivitiesDataAccess";
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault());
 
     public static final String TABLE_NAME = "activities";
     public static final String COLUMN_ID = "id";
@@ -42,23 +43,40 @@ public class ActivitiesDataAccess {
         this.database = this.dbHelper.getWritableDatabase();
     }
 
-    
     public Activities insertActivity(Activities activity) {
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_TITLE, activity.getTitle());
-        values.put(COLUMN_DESCRIPTION, activity.getDescription());
-        values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
-        values.put(COLUMN_STATUS, activity.getStatus());
-        values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
+        if (activity == null) {
+            Log.e(TAG, "Attempted to insert null activity");
+            return null;
+        }
 
+        if (activity.getDate() == null) {
+            Log.e(TAG, "Activity date is null for: " + activity.getTitle());
+            return null;
+        }
+
+        ContentValues values = new ContentValues();
         try {
+            values.put(COLUMN_TITLE, activity.getTitle());
+            values.put(COLUMN_DESCRIPTION, activity.getDescription());
+            values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
+            values.put(COLUMN_STATUS, activity.getStatus());
+            values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
+
+            Log.d(TAG, "Inserting activity: " + activity.getTitle() + 
+                      " with date: " + dateFormat.format(activity.getDate()));
+
             long id = database.insert(TABLE_NAME, null, values);
             if (id != -1) {
                 activity.setId((int) id);
+                Log.d(TAG, "Activity inserted successfully with ID: " + id);
                 return activity;
+            } else {
+                Log.e(TAG, "Failed to insert activity: " + activity.getTitle());
             }
         } catch (SQLiteException e) {
-            Log.e(TAG, "Error inserting activity: " + activity.getTitle(), e);
+            Log.e(TAG, "SQLite error inserting activity: " + activity.getTitle(), e);
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error inserting activity: " + activity.getTitle(), e);
         }
         return null;
     }

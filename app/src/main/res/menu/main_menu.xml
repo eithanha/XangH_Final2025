@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_manage_categories"
+        android:icon="@drawable/baseline_category_24"
         android:title="@string/action_manage_categories"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
    
 </menu> 

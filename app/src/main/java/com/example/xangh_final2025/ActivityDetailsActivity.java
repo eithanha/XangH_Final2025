@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -83,7 +84,11 @@ public class ActivityDetailsActivity extends AppCompatActivity {
             putDataIntoUI();
             btnDelete.setVisibility(View.VISIBLE);
         } else {
+            // Initialize new activity with current date
             activity = new Activities();
+            activity.setDate(new Date()); // Set current date
+            activity.setStatus("Pending");
+            
             // Get data from extras if available
             String title = intent.getStringExtra(EXTRA_ACTIVITY_TITLE);
             String description = intent.getStringExtra(EXTRA_ACTIVITY_DESCRIPTION);
@@ -109,8 +114,17 @@ public class ActivityDetailsActivity extends AppCompatActivity {
         if (activity != null) {
             txtTitle.setText(activity.getTitle());
             txtDescription.setText(activity.getDescription());
-            calendar.setTime(activity.getDate());
-            txtDueDate.setText(dateFormat.format(activity.getDate()));
+            
+            // Ensure date is not null before setting calendar
+            if (activity.getDate() != null) {
+                calendar.setTime(activity.getDate());
+                txtDueDate.setText(dateFormat.format(activity.getDate()));
+            } else {
+                // If date is null, set to current date
+                activity.setDate(new Date());
+                calendar.setTime(activity.getDate());
+                txtDueDate.setText(dateFormat.format(activity.getDate()));
+            }
             
             if (activity.getCategoryId() != 0) {
                 for (int i = 0; i < categories.size(); i++) {
@@ -144,46 +158,82 @@ public class ActivityDetailsActivity extends AppCompatActivity {
         try {
             if (validate()) {
                 getDataFromUI();
-                if (activity.getId() > 0) {
-                    activitiesDb.updateActivity(activity);
-                    Log.d(TAG, "Activity updated successfully");
-                } else {
-                    activitiesDb.insertActivity(activity);
-                    Log.d(TAG, "Activity inserted successfully");
+                if (activity == null) {
+                    Log.e(TAG, "Activity is null after getDataFromUI");
+                    Toast.makeText(this, "Error creating activity", Toast.LENGTH_SHORT).show();
+                    return false;
                 }
-                startActivity(new Intent(this, MainActivity.class));
-                return true;
+
+                if (activity.getDate() == null) {
+                    Log.e(TAG, "Activity date is null");
+                    Toast.makeText(this, "Invalid date", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+
+                Log.d(TAG, "Saving activity: " + activity.getTitle() + 
+                          " with date: " + dateFormat.format(activity.getDate()));
+
+                if (activity.getId() > 0) {
+                    Activities updatedActivity = activitiesDb.updateActivity(activity);
+                    if (updatedActivity != null) {
+                        Log.d(TAG, "Activity updated successfully");
+                        startActivity(new Intent(this, MainActivity.class));
+                        return true;
+                    } else {
+                        Log.e(TAG, "Failed to update activity");
+                        Toast.makeText(this, "Failed to update activity", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Activities insertedActivity = activitiesDb.insertActivity(activity);
+                    if (insertedActivity != null) {
+                        Log.d(TAG, "Activity inserted successfully");
+                        startActivity(new Intent(this, MainActivity.class));
+                        return true;
+                    } else {
+                        Log.e(TAG, "Failed to insert activity");
+                        Toast.makeText(this, "Failed to add activity", Toast.LENGTH_SHORT).show();
+                    }
+                }
             } else {
                 Log.d(TAG, "Validation failed");
-                return false;
             }
         } catch (Exception e) {
-            Log.d(TAG, "Error: " + e.getMessage());
-            return false;
+            Log.e(TAG, "Error saving activity: " + e.getMessage(), e);
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+        return false;
     }
 
     private void getDataFromUI() {
-        String title = txtTitle.getText().toString();
-        String description = txtDescription.getText().toString();
-        String dueDateStr = txtDueDate.getText().toString();
-        int categoryId = spinnerCategory.getSelectedItemPosition() == 0 ? 0 :
-                categories.get(spinnerCategory.getSelectedItemPosition() - 1).getId();
-
-        Date date = null;
         try {
-            date = dateFormat.parse(dueDateStr);
-        } catch (ParseException e) {
-            Log.d(TAG, "Unable to parse date from string");
-        }
+            String title = txtTitle.getText().toString();
+            String description = txtDescription.getText().toString();
+            String dueDateStr = txtDueDate.getText().toString();
+            int categoryId = spinnerCategory.getSelectedItemPosition() == 0 ? 0 :
+                    categories.get(spinnerCategory.getSelectedItemPosition() - 1).getId();
 
-        if (activity != null) {
-            activity.setTitle(title);
-            activity.setDescription(description);
-            activity.setDate(date);
-            activity.setCategoryId(categoryId);
-        } else {
-            activity = new Activities(title, description, date, "Pending", categoryId);
+            Log.d(TAG, "Parsing date: " + dueDateStr);
+            Date date = dateFormat.parse(dueDateStr);
+            if (date == null) {
+                Log.e(TAG, "Failed to parse date: " + dueDateStr);
+                return;
+            }
+
+            if (activity != null) {
+                activity.setTitle(title);
+                activity.setDescription(description);
+                activity.setDate(date);
+                activity.setCategoryId(categoryId);
+            } else {
+                activity = new Activities(title, description, date, "Pending", categoryId);
+            }
+            Log.d(TAG, "Activity data retrieved successfully");
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing date: " + e.getMessage(), e);
+            Toast.makeText(this, "Invalid date format", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting data from UI: " + e.getMessage(), e);
+            Toast.makeText(this, "Error processing data", Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.xangh_final2025;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -194,17 +195,28 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
     }
 
     private void addActivity(Activities activity) {
+        if (activity == null || activity.getDate() == null) {
+            Toast.makeText(this, "Invalid activity data", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         new Thread(() -> {
-            Activities savedActivity = activitiesDb.insertActivity(activity);
-            runOnUiThread(() -> {
-                if (savedActivity != null) {
-                    activities.add(savedActivity);
-                    activityAdapter.setActivities(activities);
-                    Toast.makeText(this, R.string.activity_added_success, Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, R.string.error_activity_add_failed, Toast.LENGTH_SHORT).show();
-                }
-            });
+            try {
+                Activities savedActivity = activitiesDb.insertActivity(activity);
+                runOnUiThread(() -> {
+                    if (savedActivity != null) {
+                        activities.add(savedActivity);
+                        activityAdapter.setActivities(activities);
+                        Toast.makeText(this, R.string.activity_added_success, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, R.string.error_activity_add_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error adding activity", e);
+                runOnUiThread(() -> 
+                    Toast.makeText(this, "Error adding activity: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
         }).start();
     }
 

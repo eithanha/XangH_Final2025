@@ -9,7 +9,7 @@
         android:id="@+id/categoryToolBar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorAccent"
+        android:background="?attr/colorOnPrimary"
         android:theme="?attr/actionBarTheme"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -28,10 +28,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:background="?attr/colorAccent"
         android:contentDescription="@string/add_activity"
         android:padding="8dp"
-        android:src="@android:drawable/ic_input_add"
+        android:src="@drawable/ic_add"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
