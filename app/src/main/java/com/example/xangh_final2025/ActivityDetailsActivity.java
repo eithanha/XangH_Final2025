@@ -79,14 +79,23 @@ public class ActivityDetailsActivity extends AppCompatActivity {
         // Get activity ID from intent
         Intent intent = getIntent();
         long id = intent.getLongExtra(EXTRA_ACTIVITY_ID, 0);
+        Log.d(TAG, "Received activity ID: " + id);
+        
         if (id > 0) {
             activity = activitiesDb.getActivityById((int) id);
+            if (activity == null) {
+                Log.e(TAG, "Failed to load activity with ID: " + id);
+                Toast.makeText(this, "Failed to load activity", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+            Log.d(TAG, "Loaded activity: " + activity.getTitle() + " with ID: " + activity.getId());
             putDataIntoUI();
             btnDelete.setVisibility(View.VISIBLE);
         } else {
-            // Initialize new activity with current date
+            // Initialize a new activity with current date
             activity = new Activities();
-            activity.setDate(new Date()); // Set current date
+            activity.setDate(new Date()); // Set current date as default
             activity.setStatus("Pending");
             
             // Get data from extras if available
@@ -115,12 +124,12 @@ public class ActivityDetailsActivity extends AppCompatActivity {
             txtTitle.setText(activity.getTitle());
             txtDescription.setText(activity.getDescription());
             
-            // Ensure date is not null before setting calendar
+            // Ensure date is not null before setting it
             if (activity.getDate() != null) {
                 calendar.setTime(activity.getDate());
                 txtDueDate.setText(dateFormat.format(activity.getDate()));
             } else {
-                // If date is null, set to current date
+                // If date is null, set current date
                 activity.setDate(new Date());
                 calendar.setTime(activity.getDate());
                 txtDueDate.setText(dateFormat.format(activity.getDate()));
@@ -156,52 +165,86 @@ public class ActivityDetailsActivity extends AppCompatActivity {
 
     private boolean save() {
         try {
-            if (validate()) {
-                getDataFromUI();
-                if (activity == null) {
-                    Log.e(TAG, "Activity is null after getDataFromUI");
-                    Toast.makeText(this, "Error creating activity", Toast.LENGTH_SHORT).show();
-                    return false;
+            if (!validate()) {
+                Log.d(TAG, "Validation failed");
+                return false;
+            }
+
+            // Get data from UI
+            String title = txtTitle.getText().toString().trim();
+            String description = txtDescription.getText().toString().trim();
+            String dueDateStr = txtDueDate.getText().toString().trim();
+            int categoryId = spinnerCategory.getSelectedItemPosition() == 0 ? 0 :
+                    categories.get(spinnerCategory.getSelectedItemPosition() - 1).getId();
+
+            // Parse date
+            Date date;
+            try {
+                date = dateFormat.parse(dueDateStr);
+                if (date == null) {
+                    throw new ParseException("Failed to parse date", 0);
                 }
+            } catch (ParseException e) {
+                Log.e(TAG, "Failed to parse date: " + dueDateStr, e);
+                Toast.makeText(this, "Invalid date format", Toast.LENGTH_SHORT).show();
+                return false;
+            }
 
-                if (activity.getDate() == null) {
-                    Log.e(TAG, "Activity date is null");
-                    Toast.makeText(this, "Invalid date", Toast.LENGTH_SHORT).show();
-                    return false;
-                }
-
-                Log.d(TAG, "Saving activity: " + activity.getTitle() + 
-                          " with date: " + dateFormat.format(activity.getDate()));
-
-                if (activity.getId() > 0) {
-                    Activities updatedActivity = activitiesDb.updateActivity(activity);
-                    if (updatedActivity != null) {
-                        Log.d(TAG, "Activity updated successfully");
-                        startActivity(new Intent(this, MainActivity.class));
-                        return true;
-                    } else {
-                        Log.e(TAG, "Failed to update activity");
-                        Toast.makeText(this, "Failed to update activity", Toast.LENGTH_SHORT).show();
-                    }
+            Activities savedActivity;
+            
+            if (activity != null && activity.getId() > 0) {
+                // Update existing activity
+                activity.setTitle(title);
+                activity.setDescription(description);
+                activity.setDate(date);
+                activity.setCategoryId(categoryId);
+                
+                Log.d(TAG, "Updating existing activity: " + activity.toString());
+                savedActivity = activitiesDb.updateActivity(activity);
+                
+                if (savedActivity != null) {
+                    Log.d(TAG, "Activity updated successfully with ID: " + savedActivity.getId());
                 } else {
-                    Activities insertedActivity = activitiesDb.insertActivity(activity);
-                    if (insertedActivity != null) {
-                        Log.d(TAG, "Activity inserted successfully");
-                        startActivity(new Intent(this, MainActivity.class));
-                        return true;
-                    } else {
-                        Log.e(TAG, "Failed to insert activity");
-                        Toast.makeText(this, "Failed to add activity", Toast.LENGTH_SHORT).show();
-                    }
+                    Log.e(TAG, "Failed to update activity with ID: " + activity.getId());
+                    Toast.makeText(this, "Failed to update activity", Toast.LENGTH_SHORT).show();
+                    return false;
                 }
             } else {
-                Log.d(TAG, "Validation failed");
+                // Create new activity
+                Activities newActivity = new Activities(
+                    title,
+                    description,
+                    date,
+                    "Pending",
+                    categoryId
+                );
+                
+                Log.d(TAG, "Creating new activity: " + newActivity.toString());
+                savedActivity = activitiesDb.insertActivity(newActivity);
+                
+                if (savedActivity == null || savedActivity.getId() <= 0) {
+                    Log.e(TAG, "Failed to create new activity");
+                    Toast.makeText(this, "Failed to create activity", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+                Log.d(TAG, "Activity created successfully with ID: " + savedActivity.getId());
             }
+
+            // Set result and finish
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra(EXTRA_ACTIVITY_ID, savedActivity.getId());
+            setResult(RESULT_OK, resultIntent);
+            Log.d(TAG, "Setting result with activity ID: " + savedActivity.getId());
+            
+            Toast.makeText(this, "Activity saved successfully", Toast.LENGTH_SHORT).show();
+            finish();
+            return true;
+
         } catch (Exception e) {
             Log.e(TAG, "Error saving activity: " + e.getMessage(), e);
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error saving activity: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return false;
         }
-        return false;
     }
 
     private void getDataFromUI() {
@@ -219,15 +262,18 @@ public class ActivityDetailsActivity extends AppCompatActivity {
                 return;
             }
 
-            if (activity != null) {
-                activity.setTitle(title);
-                activity.setDescription(description);
-                activity.setDate(date);
-                activity.setCategoryId(categoryId);
-            } else {
-                activity = new Activities(title, description, date, "Pending", categoryId);
+            // Preserve the existing activity object and update its fields
+            if (activity == null) {
+                activity = new Activities();
             }
-            Log.d(TAG, "Activity data retrieved successfully");
+            
+            // Update the existing activity object
+            activity.setTitle(title);
+            activity.setDescription(description);
+            activity.setDate(date);
+            activity.setCategoryId(categoryId);
+            
+            Log.d(TAG, "Activity data retrieved successfully with ID: " + activity.getId());
         } catch (ParseException e) {
             Log.e(TAG, "Error parsing date: " + e.getMessage(), e);
             Toast.makeText(this, "Invalid date format", Toast.LENGTH_SHORT).show();

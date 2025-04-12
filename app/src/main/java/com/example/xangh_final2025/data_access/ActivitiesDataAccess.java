@@ -54,29 +54,68 @@ public class ActivitiesDataAccess {
             return null;
         }
 
-        ContentValues values = new ContentValues();
+        SQLiteDatabase db = null;
         try {
-            values.put(COLUMN_TITLE, activity.getTitle());
-            values.put(COLUMN_DESCRIPTION, activity.getDescription());
-            values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
-            values.put(COLUMN_STATUS, activity.getStatus());
-            values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
+            // Get a new database instance
+            db = dbHelper.getWritableDatabase();
+            
+            // Begin transaction
+            db.beginTransaction();
+            
+            try {
+                ContentValues values = new ContentValues();
+                values.put(COLUMN_TITLE, activity.getTitle());
+                values.put(COLUMN_DESCRIPTION, activity.getDescription());
+                values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
+                values.put(COLUMN_STATUS, activity.getStatus());
+                values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
 
-            Log.d(TAG, "Inserting activity: " + activity.getTitle() + 
-                      " with date: " + dateFormat.format(activity.getDate()));
+                Log.d(TAG, "Attempting to insert activity: " + activity.toString());
 
-            long id = database.insert(TABLE_NAME, null, values);
-            if (id != -1) {
-                activity.setId((int) id);
-                Log.d(TAG, "Activity inserted successfully with ID: " + id);
-                return activity;
-            } else {
-                Log.e(TAG, "Failed to insert activity: " + activity.getTitle());
+                // Insert the activity
+                long id = db.insert(TABLE_NAME, null, values);
+                Log.d(TAG, "Database insert returned ID: " + id);
+
+                if (id > 0) {
+                    // Query the inserted activity to verify
+                    String[] columns = {COLUMN_ID, COLUMN_TITLE, COLUMN_DESCRIPTION, COLUMN_DATE, COLUMN_STATUS, COLUMN_CATEGORY_ID};
+                    String selection = COLUMN_ID + " = ?";
+                    String[] selectionArgs = {String.valueOf(id)};
+                    
+                    Cursor cursor = db.query(TABLE_NAME, columns, selection, selectionArgs, null, null, null);
+                    
+                    if (cursor != null && cursor.moveToFirst()) {
+                        Activities insertedActivity = new Activities(
+                            cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)),
+                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)),
+                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
+                            dateFormat.parse(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DATE))),
+                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS)),
+                            cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY_ID))
+                        );
+                        cursor.close();
+                        
+                        // Mark transaction as successful
+                        db.setTransactionSuccessful();
+                        Log.d(TAG, "Successfully inserted and verified activity with ID: " + insertedActivity.getId());
+                        return insertedActivity;
+                    } else {
+                        Log.e(TAG, "Failed to verify inserted activity with ID: " + id);
+                        if (cursor != null) {
+                            cursor.close();
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "Failed to insert activity - insert returned invalid ID: " + id);
+                }
+            } finally {
+                // End transaction
+                if (db != null) {
+                    db.endTransaction();
+                }
             }
-        } catch (SQLiteException e) {
-            Log.e(TAG, "SQLite error inserting activity: " + activity.getTitle(), e);
         } catch (Exception e) {
-            Log.e(TAG, "Unexpected error inserting activity: " + activity.getTitle(), e);
+            Log.e(TAG, "Error inserting activity: " + e.getMessage(), e);
         }
         return null;
     }
@@ -148,6 +187,18 @@ public class ActivitiesDataAccess {
 
     
     public Activities updateActivity(Activities activity) {
+        if (activity == null || activity.getId() <= 0) {
+            Log.e(TAG, "Invalid activity or activity ID for update");
+            return null;
+        }
+
+        // First verify the activity exists
+        Activities existingActivity = getActivityById(activity.getId());
+        if (existingActivity == null) {
+            Log.e(TAG, "Activity not found in database: " + activity.getId());
+            return null;
+        }
+
         ContentValues values = new ContentValues();
         values.put(COLUMN_TITLE, activity.getTitle());
         values.put(COLUMN_DESCRIPTION, activity.getDescription());
@@ -156,16 +207,28 @@ public class ActivitiesDataAccess {
         values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
 
         try {
-            int rowsUpdated = database.update(TABLE_NAME, values, 
-                COLUMN_ID + "=" + activity.getId(), null);
+            String whereClause = COLUMN_ID + "=?";
+            String[] whereArgs = new String[]{String.valueOf(activity.getId())};
             
-            if (rowsUpdated > 0) {
-                return activity;
+            // Use a transaction to ensure atomicity
+            database.beginTransaction();
+            try {
+                int rowsUpdated = database.update(TABLE_NAME, values, whereClause, whereArgs);
+                
+                if (rowsUpdated > 0) {
+                    database.setTransactionSuccessful();
+                    Log.d(TAG, "Activity updated successfully: " + activity.getId());
+                    return activity;
+                } else {
+                    Log.e(TAG, "No rows updated for activity: " + activity.getId());
+                }
+            } finally {
+                database.endTransaction();
             }
         } catch (SQLiteException e) {
             Log.e(TAG, "Error updating activity: " + activity.getId(), e);
         }
-        return activity;
+        return null;
     }
 
     

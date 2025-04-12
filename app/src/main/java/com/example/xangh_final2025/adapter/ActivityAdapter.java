@@ -1,5 +1,6 @@
 package com.example.xangh_final2025.adapter;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,8 +35,13 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
     }
 
     public void setActivities(List<Activities> activities) {
-        this.activities = activities;
+        if (activities == null) {
+            this.activities = new ArrayList<>();
+        } else {
+            this.activities = new ArrayList<>(activities);
+        }
         notifyDataSetChanged();
+        Log.d("ActivityAdapter", "Activities list updated, new size: " + this.activities.size());
     }
 
     public void setCategories(List<Category> categories) {
@@ -54,26 +60,34 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Activities activity = activities.get(position);
-        holder.titleText.setText(activity.getTitle());
-        holder.descriptionText.setText(activity.getDescription());
-
-        // Find category name
-        String categoryInfo = "";
-        if (activity.getCategoryId() != 0) {
+        holder.txtTitle.setText(activity.getTitle());
+        holder.txtDescription.setText(activity.getDescription());
+        holder.txtDueDate.setText("Due: " + dateFormat.format(activity.getDate()));
+        
+        // Set category name if available
+        String categoryName = "No Category";
+        if (activity.getCategoryId() > 0) {
             for (Category category : categories) {
                 if (category.getId() == activity.getCategoryId()) {
-                    categoryInfo = " • " + category.getName();
+                    categoryName = category.getName();
                     break;
                 }
             }
         }
+        holder.txtCategory.setText("Category: " + categoryName);
 
-        holder.dueDateText.setText(String.format("Due: %s%s",
-                dateFormat.format(activity.getDate()),
-                categoryInfo));
+        // Set click listeners
+        holder.btnEdit.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onEditClick(activity);
+            }
+        });
 
-        holder.editButton.setOnClickListener(v -> listener.onEditClick(activity));
-        holder.deleteButton.setOnClickListener(v -> listener.onDeleteClick(activity));
+        holder.btnDelete.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onDeleteClick(activity);
+            }
+        });
     }
 
     @Override
@@ -82,19 +96,21 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView titleText;
-        TextView descriptionText;
-        TextView dueDateText;
-        ImageButton editButton;
-        ImageButton deleteButton;
+        TextView txtTitle;
+        TextView txtDescription;
+        TextView txtDueDate;
+        TextView txtCategory;
+        ImageButton btnEdit;
+        ImageButton btnDelete;
 
         ViewHolder(View itemView) {
             super(itemView);
-            titleText = itemView.findViewById(R.id.titleText);
-            descriptionText = itemView.findViewById(R.id.descriptionText);
-            dueDateText = itemView.findViewById(R.id.dueDateText);
-            editButton = itemView.findViewById(R.id.editButton);
-            deleteButton = itemView.findViewById(R.id.deleteButton);
+            txtTitle = itemView.findViewById(R.id.titleText);
+            txtDescription = itemView.findViewById(R.id.descriptionText);
+            txtDueDate = itemView.findViewById(R.id.dueDateText);
+            txtCategory = itemView.findViewById(R.id.categoryText);
+            btnEdit = itemView.findViewById(R.id.editButton);
+            btnDelete = itemView.findViewById(R.id.deleteButton);
         }
     }
 }

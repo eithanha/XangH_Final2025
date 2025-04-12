@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
     private void setupAddButton() {
         findViewById(R.id.addButton).setOnClickListener(v -> {
             Intent intent = new Intent(this, ActivityDetailsActivity.class);
-            startActivity(intent);
+            startActivityForResult(intent, 1);
         });
     }
 
@@ -223,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
     private void filterActivities() {
         if (selectedCategoryId == -1) {
             activityAdapter.setActivities(activities);
+            Log.d("MainActivity", "Showing all activities, count: " + activities.size());
         } else {
             List<Activities> filteredActivities = new ArrayList<>();
             for (Activities activity : activities) {
@@ -231,18 +232,26 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
                 }
             }
             activityAdapter.setActivities(filteredActivities);
+            Log.d("MainActivity", "Filtered activities by category " + selectedCategoryId + 
+                  ", count: " + filteredActivities.size());
         }
     }
 
     @Override
     public void onEditClick(Activities activity) {
+        if (activity == null) {
+            Log.e("MainActivity", "Attempted to edit null activity");
+            return;
+        }
+        
+        Log.d("MainActivity", "Editing activity with ID: " + activity.getId());
         Intent intent = new Intent(this, ActivityDetailsActivity.class);
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_ID, activity.getId());
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_TITLE, activity.getTitle());
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_DESCRIPTION, activity.getDescription());
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_DATE, activity.getDate().getTime());
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_CATEGORY_ID, activity.getCategoryId());
-        startActivity(intent);
+        startActivityForResult(intent, 1);
     }
 
     @Override
@@ -273,6 +282,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
             Activities updatedActivity = activitiesDb.updateActivity(activity);
             runOnUiThread(() -> {
                 if (updatedActivity != null) {
+                    // Find and update the activity in the list
                     for (int i = 0; i < activities.size(); i++) {
                         if (activities.get(i).getId() == activity.getId()) {
                             activities.set(i, updatedActivity);
@@ -280,8 +290,13 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
                         }
                     }
                     activityAdapter.setActivities(activities);
+                    filterActivities(); // Reapply the current filter
                     Toast.makeText(this, R.string.activity_updated_success, Toast.LENGTH_SHORT).show();
                 } else {
+                    // If update failed, refresh the entire list from database
+                    activities = activitiesDb.getAllActivities();
+                    activityAdapter.setActivities(activities);
+                    filterActivities(); // Reapply the current filter
                     Toast.makeText(this, R.string.error_activity_update_failed, Toast.LENGTH_SHORT).show();
                 }
             });
@@ -302,6 +317,38 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
 
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d("MainActivity", "onActivityResult called with requestCode: " + requestCode + 
+              ", resultCode: " + resultCode);
+        
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            // Get the updated activity ID from the result
+            long updatedId = data.getLongExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_ID, 0);
+            Log.d("MainActivity", "Received activity ID: " + updatedId);
+            
+            // Always refresh the list from database, regardless of the ID
+            new Thread(() -> {
+                List<Activities> updatedActivities = activitiesDb.getAllActivities();
+                Log.d("MainActivity", "Refreshed activities list, new size: " + updatedActivities.size());
+                
+                // Sort activities by date
+                updatedActivities.sort((a1, a2) -> a2.getDate().compareTo(a1.getDate()));
+                
+                // Update the adapter with the new list
+                runOnUiThread(() -> {
+                    activities = updatedActivities;
+                    activityAdapter.setActivities(activities);
+                    filterActivities();
+                    Log.d("MainActivity", "Activity list updated and filtered on UI thread");
+                });
+            }).start();
+        } else {
+            Log.d("MainActivity", "Activity result not OK or wrong request code");
+        }
     }
 
     @Override
