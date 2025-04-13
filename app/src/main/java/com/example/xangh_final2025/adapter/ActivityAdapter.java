@@ -24,6 +24,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
     private List<Category> categories = new ArrayList<>();
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
     private final OnReminderClickListener listener;
+    private static final String TAG = "ActivityAdapter";
 
     public interface OnReminderClickListener {
         void onEditClick(Activities activity);
@@ -36,12 +37,13 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
 
     public void setActivities(List<Activities> activities) {
         if (activities == null) {
+            Log.d(TAG, "Received null activities list");
             this.activities = new ArrayList<>();
         } else {
+            Log.d(TAG, "Activities list updated, new size: " + activities.size());
             this.activities = new ArrayList<>(activities);
         }
         notifyDataSetChanged();
-        Log.d("ActivityAdapter", "Activities list updated, new size: " + this.activities.size());
     }
 
     public void setCategories(List<Category> categories) {
@@ -66,7 +68,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
         
         // Set category name if available
         String categoryName = "No Category";
-        if (activity.getCategoryId() > 0) {
+        if (activity.getCategoryId() > 0 && categories != null) {
             for (Category category : categories) {
                 if (category.getId() == activity.getCategoryId()) {
                     categoryName = category.getName();

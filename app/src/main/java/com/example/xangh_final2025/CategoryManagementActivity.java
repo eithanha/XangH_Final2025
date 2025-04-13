@@ -40,10 +40,12 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
         loadCategories();
     }
 
+    // Setup Database
     private void setupDatabase() {
         categoryDb = new CategoryDataAccess(this);
     }
 
+    // Setup Toolbar
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.categoryToolBar);
         setSupportActionBar(toolbar);
@@ -51,6 +53,7 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
         getSupportActionBar().setTitle(R.string.categories_title);
     }
 
+    // Setup Recycler View
     private void setupRecyclerView() {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -58,6 +61,7 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
         recyclerView.setAdapter(categoryAdapter);
     }
 
+    // Setup Floating Action Button
     private void setupFab() {
         ImageButton addButton = findViewById(R.id.addButton);
         addButton.setContentDescription(getString(R.string.add_category));
@@ -76,6 +80,7 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
         showEditCategoryDialog(category);
     }
+
 
     private void showAddCategoryDialog() {
         showCategoryDialog(null, (name) -> {

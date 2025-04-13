@@ -54,68 +54,66 @@ public class ActivitiesDataAccess {
             return null;
         }
 
+        ContentValues values = new ContentValues();
         SQLiteDatabase db = null;
         try {
-            // Get a new database instance
+            values.put(COLUMN_TITLE, activity.getTitle());
+            values.put(COLUMN_DESCRIPTION, activity.getDescription());
+            values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
+            values.put(COLUMN_STATUS, activity.getStatus());
+            values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
+
+            Log.d(TAG, "Inserting activity: " + activity.getTitle() + 
+                      " with date: " + dateFormat.format(activity.getDate()));
+
+            // Get a new database instance to ensure we're not using a stale one
             db = dbHelper.getWritableDatabase();
             
-            // Begin transaction
+            // Use a transaction to ensure atomicity
             db.beginTransaction();
-            
             try {
-                ContentValues values = new ContentValues();
-                values.put(COLUMN_TITLE, activity.getTitle());
-                values.put(COLUMN_DESCRIPTION, activity.getDescription());
-                values.put(COLUMN_DATE, dateFormat.format(activity.getDate()));
-                values.put(COLUMN_STATUS, activity.getStatus());
-                values.put(COLUMN_CATEGORY_ID, activity.getCategoryId());
-
-                Log.d(TAG, "Attempting to insert activity: " + activity.toString());
-
-                // Insert the activity
                 long id = db.insert(TABLE_NAME, null, values);
                 Log.d(TAG, "Database insert returned ID: " + id);
+                
+                if (id != -1) {
+                    db.setTransactionSuccessful();
+                    activity.setId((int) id);
+                    Log.d(TAG, "Activity inserted successfully with ID: " + id);
+                    
+                    // Verify the activity was actually inserted
+                    String query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + " = ?";
+                    String[] selectionArgs = new String[]{String.valueOf(id)};
+                    
+                    try (Cursor cursor = db.rawQuery(query, selectionArgs)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            String title = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE));
+                            String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION));
+                            String dateStr = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DATE));
+                            String status = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS));
+                            int categoryId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY_ID));
 
-                if (id > 0) {
-                    // Query the inserted activity to verify
-                    String[] columns = {COLUMN_ID, COLUMN_TITLE, COLUMN_DESCRIPTION, COLUMN_DATE, COLUMN_STATUS, COLUMN_CATEGORY_ID};
-                    String selection = COLUMN_ID + " = ?";
-                    String[] selectionArgs = {String.valueOf(id)};
-                    
-                    Cursor cursor = db.query(TABLE_NAME, columns, selection, selectionArgs, null, null, null);
-                    
-                    if (cursor != null && cursor.moveToFirst()) {
-                        Activities insertedActivity = new Activities(
-                            cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)),
-                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)),
-                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
-                            dateFormat.parse(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DATE))),
-                            cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS)),
-                            cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY_ID))
-                        );
-                        cursor.close();
-                        
-                        // Mark transaction as successful
-                        db.setTransactionSuccessful();
-                        Log.d(TAG, "Successfully inserted and verified activity with ID: " + insertedActivity.getId());
-                        return insertedActivity;
-                    } else {
-                        Log.e(TAG, "Failed to verify inserted activity with ID: " + id);
-                        if (cursor != null) {
-                            cursor.close();
+                            Date date = dateFormat.parse(dateStr);
+                            Activities insertedActivity = new Activities((int) id, title, description, date, status, categoryId);
+                            Log.d(TAG, "Verified inserted activity with ID: " + insertedActivity.getId());
+                            return insertedActivity;
+                        } else {
+                            Log.e(TAG, "Failed to verify inserted activity with ID: " + id);
                         }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error verifying inserted activity: " + e.getMessage(), e);
                     }
                 } else {
-                    Log.e(TAG, "Failed to insert activity - insert returned invalid ID: " + id);
+                    Log.e(TAG, "Failed to insert activity: " + activity.getTitle());
                 }
             } finally {
-                // End transaction
                 if (db != null) {
                     db.endTransaction();
                 }
             }
+        } catch (SQLiteException e) {
+            Log.e(TAG, "SQLite error inserting activity: " + activity.getTitle(), e);
         } catch (Exception e) {
-            Log.e(TAG, "Error inserting activity: " + e.getMessage(), e);
+            Log.e(TAG, "Unexpected error inserting activity: " + activity.getTitle(), e);
         }
         return null;
     }
@@ -218,7 +216,9 @@ public class ActivitiesDataAccess {
                 if (rowsUpdated > 0) {
                     database.setTransactionSuccessful();
                     Log.d(TAG, "Activity updated successfully: " + activity.getId());
-                    return activity;
+                    
+                    // Return the updated activity
+                    return getActivityById(activity.getId());
                 } else {
                     Log.e(TAG, "No rows updated for activity: " + activity.getId());
                 }

@@ -31,11 +31,14 @@ import com.google.android.material.tabs.TabLayout;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements ActivityAdapter.OnReminderClickListener {
+
+    public static final String TAG = "MainActivity";
     private MySQLiteHelper dbHelper;
     private TabLayout tabLayout;
     private List<Category> categories = new ArrayList<>();
@@ -74,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
         categoryDb = new CategoryDataAccess(this);
         categories = categoryDb.getAllCategories();
         activities = activitiesDb.getAllActivities();
+        activityAdapter.setCategories(categories);
         activityAdapter.setActivities(activities);
     }
 
@@ -88,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 selectedCategoryId = tab.getPosition() == 0 ? -1 : categories.get(tab.getPosition() - 1).getId();
-                filterActivities();
+                filterActivities(selectedCategoryId);
             }
 
             @Override
@@ -220,19 +224,21 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
         }).start();
     }
 
-    private void filterActivities() {
-        if (selectedCategoryId == -1) {
+    private void filterActivities(int categoryId) {
+        if (categoryId == -1) {
+            // Show all activities
             activityAdapter.setActivities(activities);
-            Log.d("MainActivity", "Showing all activities, count: " + activities.size());
+            Log.d(TAG, "Showing all activities, count: " + activities.size());
         } else {
+            // Filter activities by category
             List<Activities> filteredActivities = new ArrayList<>();
             for (Activities activity : activities) {
-                if (activity.getCategoryId() == selectedCategoryId) {
+                if (activity.getCategoryId() == categoryId) {
                     filteredActivities.add(activity);
                 }
             }
             activityAdapter.setActivities(filteredActivities);
-            Log.d("MainActivity", "Filtered activities by category " + selectedCategoryId + 
+            Log.d(TAG, "Filtered activities by category " + categoryId + 
                   ", count: " + filteredActivities.size());
         }
     }
@@ -279,27 +285,33 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
 
     private void updateActivity(Activities activity) {
         new Thread(() -> {
-            Activities updatedActivity = activitiesDb.updateActivity(activity);
-            runOnUiThread(() -> {
-                if (updatedActivity != null) {
-                    // Find and update the activity in the list
-                    for (int i = 0; i < activities.size(); i++) {
-                        if (activities.get(i).getId() == activity.getId()) {
-                            activities.set(i, updatedActivity);
-                            break;
+            try {
+                Activities updatedActivity = activitiesDb.updateActivity(activity);
+                runOnUiThread(() -> {
+                    if (updatedActivity != null) {
+                        // Find and update the activity in the list
+                        for (int i = 0; i < activities.size(); i++) {
+                            if (activities.get(i).getId() == activity.getId()) {
+                                activities.set(i, updatedActivity);
+                                break;
+                            }
                         }
+                        activityAdapter.setActivities(activities);
+                        filterActivities(selectedCategoryId); // Reapply the current filter
+                        Toast.makeText(this, R.string.activity_updated_success, Toast.LENGTH_SHORT).show();
+                    } else {
+                        // If update failed, refresh the entire list from database
+                        activities = activitiesDb.getAllActivities();
+                        activityAdapter.setActivities(activities);
+                        filterActivities(selectedCategoryId); // Reapply the current filter
+                        Toast.makeText(this, R.string.error_activity_update_failed, Toast.LENGTH_SHORT).show();
                     }
-                    activityAdapter.setActivities(activities);
-                    filterActivities(); // Reapply the current filter
-                    Toast.makeText(this, R.string.activity_updated_success, Toast.LENGTH_SHORT).show();
-                } else {
-                    // If update failed, refresh the entire list from database
-                    activities = activitiesDb.getAllActivities();
-                    activityAdapter.setActivities(activities);
-                    filterActivities(); // Reapply the current filter
-                    Toast.makeText(this, R.string.error_activity_update_failed, Toast.LENGTH_SHORT).show();
-                }
-            });
+                });
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error updating activity", e);
+                runOnUiThread(() -> 
+                    Toast.makeText(this, "Error updating activity: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
         }).start();
     }
 
@@ -322,32 +334,41 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("MainActivity", "onActivityResult called with requestCode: " + requestCode + 
-              ", resultCode: " + resultCode);
-        
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            // Get the updated activity ID from the result
-            long updatedId = data.getLongExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_ID, 0);
-            Log.d("MainActivity", "Received activity ID: " + updatedId);
-            
-            // Always refresh the list from database, regardless of the ID
-            new Thread(() -> {
-                List<Activities> updatedActivities = activitiesDb.getAllActivities();
-                Log.d("MainActivity", "Refreshed activities list, new size: " + updatedActivities.size());
-                
-                // Sort activities by date
-                updatedActivities.sort((a1, a2) -> a2.getDate().compareTo(a1.getDate()));
-                
-                // Update the adapter with the new list
-                runOnUiThread(() -> {
-                    activities = updatedActivities;
-                    activityAdapter.setActivities(activities);
-                    filterActivities();
-                    Log.d("MainActivity", "Activity list updated and filtered on UI thread");
-                });
-            }).start();
-        } else {
-            Log.d("MainActivity", "Activity result not OK or wrong request code");
+        Log.d(TAG, "onActivityResult - requestCode: " + requestCode + ", resultCode: " + resultCode);
+
+        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
+            int activityId = data.getIntExtra("activity_id", -1);
+            Log.d(TAG, "Received updated activity ID: " + activityId);
+
+            if (activityId > 0) {
+                // Create a new thread to perform database operations
+                new Thread(() -> {
+                    try {
+                        // Refresh activities from database
+                        List<Activities> updatedActivities = activitiesDb.getAllActivities();
+                        Collections.sort(updatedActivities, (a1, a2) -> a1.getDate().compareTo(a2.getDate()));
+                        
+                        // Refresh categories from database
+                        List<Category> updatedCategories = categoryDb.getAllCategories();
+                        
+                        // Update UI on main thread
+                        runOnUiThread(() -> {
+                            activities = updatedActivities;
+                            categories = updatedCategories;
+                            activityAdapter.setCategories(categories);
+                            activityAdapter.setActivities(activities);
+                            filterActivities(selectedCategoryId);
+                        });
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error refreshing activities: " + e.getMessage(), e);
+                        runOnUiThread(() -> 
+                            Toast.makeText(this, "Error refreshing activities", Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                }).start();
+            } else {
+                Log.e(TAG, "Invalid activity ID received");
+            }
         }
     }
 
