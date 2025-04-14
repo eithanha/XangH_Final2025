@@ -40,7 +40,7 @@ public class CategoryManagementActivity extends AppCompatActivity implements Cat
         loadCategories();
     }
 
-    // Setup Database
+
     private void setupDatabase() {
         categoryDb = new CategoryDataAccess(this);
     }

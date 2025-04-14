@@ -245,42 +245,64 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
 
     @Override
     public void onEditClick(Activities activity) {
-        if (activity == null) {
-            Log.e(TAG, "Attempted to edit null activity");
-            return;
-        }
-        
-        Log.d(TAG, "Editing activity with ID: " + activity.getId());
-        Intent intent = new Intent(this, ActivityDetailsActivity.class);
+        Intent intent = new Intent(MainActivity.this, ActivityDetailsActivity.class);
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_ID, activity.getId());
-        intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_TITLE, activity.getTitle());
-        intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_DESCRIPTION, activity.getDescription());
-        intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_DATE, activity.getDate().getTime());
-        intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_CATEGORY_ID, activity.getCategoryId());
         startActivityForResult(intent, 1);
     }
 
     @Override
     public void onDeleteClick(Activities activity) {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.delete_activity)
-                .setMessage(R.string.confirm_delete_activity)
-                .setPositiveButton(R.string.delete, (dialog, which) -> {
-                    new Thread(() -> {
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle("Delete Activity")
+            .setMessage("Are you sure you want to delete this activity?")
+            .setPositiveButton("Delete", (dialog, which) -> {
+                new Thread(() -> {
+                    try {
                         int rowsDeleted = activitiesDb.deleteActivity(activity.getId());
                         runOnUiThread(() -> {
                             if (rowsDeleted > 0) {
                                 activities.remove(activity);
                                 activityAdapter.setActivities(activities);
-                                Toast.makeText(this, R.string.activity_deleted_success, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Activity deleted", Toast.LENGTH_SHORT).show();
                             } else {
-                                Toast.makeText(this, R.string.error_activity_delete_failed, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Failed to delete activity", Toast.LENGTH_SHORT).show();
                             }
                         });
-                    }).start();
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error deleting activity", e);
+                        runOnUiThread(() -> 
+                            Toast.makeText(MainActivity.this, "Error deleting activity: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                }).start();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    @Override
+    public void onStatusChange(Activities activity, boolean isCompleted) {
+        new Thread(() -> {
+            try {
+                activity.setStatus(isCompleted ? "Completed" : "Pending");
+                Activities updatedActivity = activitiesDb.updateActivity(activity);
+                if (updatedActivity != null) {
+                    runOnUiThread(() -> {
+                        // Update the activity in the list
+                        int index = activities.indexOf(activity);
+                        if (index != -1) {
+                            activities.set(index, updatedActivity);
+                            activityAdapter.setActivities(activities);
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating activity status", e);
+                runOnUiThread(() -> 
+                    Toast.makeText(MainActivity.this, "Error updating status: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
+            }
+        }).start();
     }
 
     private void updateActivity(Activities activity) {

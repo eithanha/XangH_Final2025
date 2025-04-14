@@ -108,4 +108,5 @@
     <string name="activity_date">Due Date</string>
     <string name="category_name">Category Name</string>
     <string name="delete_category_button">Delete Category</string>
+    <string name="activity_completed">Completed</string>
 </resources>

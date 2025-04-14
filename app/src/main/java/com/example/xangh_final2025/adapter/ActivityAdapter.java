@@ -4,6 +4,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -29,6 +30,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
     public interface OnReminderClickListener {
         void onEditClick(Activities activity);
         void onDeleteClick(Activities activity);
+        void onStatusChange(Activities activity, boolean isCompleted);
     }
 
     public ActivityAdapter(OnReminderClickListener listener) {
@@ -82,9 +84,15 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
         }
         holder.txtCategory.setText(holder.itemView.getContext().getString(R.string.category_set, categoryName));
         
-        // Set status
-        String statusText = activity.getStatus();
-        holder.txtStatus.setText(holder.itemView.getContext().getString(R.string.status_set, statusText));
+        // Set status checkbox
+        holder.statusCheckBox.setChecked(activity.getStatus().equals("Completed"));
+        
+        // Set checkbox change listener
+        holder.statusCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (listener != null) {
+                listener.onStatusChange(activity, isChecked);
+            }
+        });
 
         // Set click listeners
         holder.btnEdit.setOnClickListener(v -> {
@@ -110,7 +118,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
         TextView txtDescription;
         TextView txtDueDate;
         TextView txtCategory;
-        TextView txtStatus;
+        CheckBox statusCheckBox;
         ImageButton btnEdit;
         ImageButton btnDelete;
 
@@ -120,7 +128,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
             txtDescription = itemView.findViewById(R.id.descriptionText);
             txtDueDate = itemView.findViewById(R.id.dueDateText);
             txtCategory = itemView.findViewById(R.id.categoryText);
-            txtStatus = itemView.findViewById(R.id.statusText);
+            statusCheckBox = itemView.findViewById(R.id.statusCheckBox);
             btnEdit = itemView.findViewById(R.id.editButton);
             btnDelete = itemView.findViewById(R.id.deleteButton);
         }
