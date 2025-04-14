@@ -217,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
                     }
                 });
             } catch (Exception e) {
-                Log.e("MainActivity", "Error adding activity", e);
+                Log.e(TAG, "Error adding activity", e);
                 runOnUiThread(() -> 
                     Toast.makeText(this, "Error adding activity: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
@@ -246,11 +246,11 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
     @Override
     public void onEditClick(Activities activity) {
         if (activity == null) {
-            Log.e("MainActivity", "Attempted to edit null activity");
+            Log.e(TAG, "Attempted to edit null activity");
             return;
         }
         
-        Log.d("MainActivity", "Editing activity with ID: " + activity.getId());
+        Log.d(TAG, "Editing activity with ID: " + activity.getId());
         Intent intent = new Intent(this, ActivityDetailsActivity.class);
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_ID, activity.getId());
         intent.putExtra(ActivityDetailsActivity.EXTRA_ACTIVITY_TITLE, activity.getTitle());
@@ -308,26 +308,35 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
                     }
                 });
             } catch (Exception e) {
-                Log.e("MainActivity", "Error updating activity", e);
+                Log.e(TAG, "Error updating activity", e);
                 runOnUiThread(() -> 
                     Toast.makeText(this, "Error updating activity: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
 
+    // Load Menu onto screen
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;
     }
 
+    // Controls menu toolbar - opens CategoryManagement and navigates to categories page
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.action_manage_categories) {
-            startActivity(new Intent(this, CategoryManagementActivity.class));
+        int id = item.getItemId();
+        
+        if (id == R.id.menu_manage_categories) {
+            Intent intent = new Intent(this, CategoryManagementActivity.class);
+            startActivity(intent);
             return true;
 
+        } else if (id == R.id.menu_exit) {
+            finish();
+            return true;
         }
+        
         return super.onOptionsItemSelected(item);
     }
 
@@ -337,41 +346,77 @@ public class MainActivity extends AppCompatActivity implements ActivityAdapter.O
         Log.d(TAG, "onActivityResult - requestCode: " + requestCode + ", resultCode: " + resultCode);
 
         if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
-            int activityId = data.getIntExtra("activity_id", -1);
-            Log.d(TAG, "Received updated activity ID: " + activityId);
-
-            if (activityId > 0) {
-                // Create a new thread to perform database operations
+            boolean activityDeleted = data.getBooleanExtra("activity_deleted", false);
+            if (activityDeleted) {
+                Log.d(TAG, "Activity was deleted, refreshing list");
                 new Thread(() -> {
                     try {
-                        // Refresh activities from database
                         List<Activities> updatedActivities = activitiesDb.getAllActivities();
+                        Log.d(TAG, "Retrieved " + updatedActivities.size() + " activities from database");
+                        
                         Collections.sort(updatedActivities, (a1, a2) -> a1.getDate().compareTo(a2.getDate()));
                         
-                        // Refresh categories from database
                         List<Category> updatedCategories = categoryDb.getAllCategories();
+                        Log.d(TAG, "Retrieved " + updatedCategories.size() + " categories from database");
                         
-                        // Update UI on main thread
                         runOnUiThread(() -> {
                             activities = updatedActivities;
                             categories = updatedCategories;
                             activityAdapter.setCategories(categories);
                             activityAdapter.setActivities(activities);
                             filterActivities(selectedCategoryId);
+                            Toast.makeText(this, getString(R.string.activity_deleted_success), Toast.LENGTH_SHORT).show();
                         });
                     } catch (Exception e) {
                         Log.e(TAG, "Error refreshing activities: " + e.getMessage(), e);
                         runOnUiThread(() -> 
-                            Toast.makeText(this, "Error refreshing activities", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.error_refreshing_activities), Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                }).start();
+                return;
+            }
+
+            int activityId = data.getIntExtra("activity_id", -1);
+            Log.d(TAG, "Received updated activity ID: " + activityId);
+
+            if (activityId > 0) {
+                new Thread(() -> {
+                    try {
+                        Log.d(TAG, "Starting to refresh activities and categories");
+                        List<Activities> updatedActivities = activitiesDb.getAllActivities();
+                        Log.d(TAG, "Retrieved " + updatedActivities.size() + " activities from database");
+                        
+                        Collections.sort(updatedActivities, (a1, a2) -> a1.getDate().compareTo(a2.getDate()));
+                        
+                        List<Category> updatedCategories = categoryDb.getAllCategories();
+                        Log.d(TAG, "Retrieved " + updatedCategories.size() + " categories from database");
+                        
+                        runOnUiThread(() -> {
+                            Log.d(TAG, "Updating UI with new data");
+                            activities = updatedActivities;
+                            categories = updatedCategories;
+                            activityAdapter.setCategories(categories);
+                            activityAdapter.setActivities(activities);
+                            filterActivities(selectedCategoryId);
+                            Log.d(TAG, "UI update complete");
+                        });
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error refreshing activities: " + e.getMessage(), e);
+                        runOnUiThread(() -> 
+                            Toast.makeText(this, getString(R.string.error_refreshing_activities), Toast.LENGTH_SHORT).show()
                         );
                     }
                 }).start();
             } else {
-                Log.e(TAG, "Invalid activity ID received");
+                Log.e(TAG, getString(R.string.error_invalid_activity_id));
             }
+        } else {
+            Log.d(TAG, getString(R.string.error_activity_result));
         }
     }
 
+    // Close Database
     @Override
     protected void onDestroy() {
         super.onDestroy();

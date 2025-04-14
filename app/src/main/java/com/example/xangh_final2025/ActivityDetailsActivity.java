@@ -143,7 +143,7 @@ public class ActivityDetailsActivity extends AppCompatActivity {
                     Date date = dateFormat.parse(dueDateStr);
                     if (date == null) {
                         Log.e(TAG, "Failed to parse date: " + dueDateStr);
-                        Toast.makeText(this, "Invalid date", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, getString(R.string.error_invalid_date), Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -177,25 +177,52 @@ public class ActivityDetailsActivity extends AppCompatActivity {
                         finish();
                     } else {
                         Log.e(TAG, "Failed to save activity");
-                        Toast.makeText(this, "Failed to save activity", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, getString(R.string.error_save_failed), Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error saving activity: " + e.getMessage(), e);
-                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.error_save_error, e.getMessage()), Toast.LENGTH_SHORT).show();
             }
         });
 
         // Set up delete button
-        btnDelete.setOnClickListener(view -> {
-            if (activity != null && activity.getId() > 0) {
-                int rowsDeleted = activitiesDb.deleteActivity(activity.getId());
-                if (rowsDeleted > 0) {
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    Toast.makeText(this, "Failed to delete activity", Toast.LENGTH_SHORT).show();
-                }
+        setupDeleteButton();
+    }
+
+    private void setupDeleteButton() {
+        Button deleteButton = findViewById(R.id.btnDelete);
+        deleteButton.setOnClickListener(v -> {
+            if (activity != null) {
+                new AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.confirm_delete_title))
+                    .setMessage(getString(R.string.confirm_delete_message))
+                    .setPositiveButton(getString(R.string.confirm_delete_positive), (dialog, which) -> {
+                        new Thread(() -> {
+                            try {
+                                int rowsDeleted = activitiesDb.deleteActivity(activity.getId());
+                                runOnUiThread(() -> {
+                                    if (rowsDeleted > 0) {
+                                        Log.d(TAG, "Activity deleted successfully");
+                                        Intent resultIntent = new Intent();
+                                        resultIntent.putExtra("activity_deleted", true);
+                                        setResult(RESULT_OK, resultIntent);
+                                        finish();
+                                    } else {
+                                        Log.e(TAG, "Failed to delete activity");
+                                        Toast.makeText(this, getString(R.string.error_deleting_activity), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error deleting activity: " + e.getMessage(), e);
+                                runOnUiThread(() -> 
+                                    Toast.makeText(this, getString(R.string.error_deleting_activity), Toast.LENGTH_SHORT).show()
+                                );
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton(getString(R.string.confirm_delete_negative), null)
+                    .show();
             }
         });
     }
@@ -204,15 +231,15 @@ public class ActivityDetailsActivity extends AppCompatActivity {
         boolean isValid = true;
         if (txtTitle.getText().toString().isEmpty()) {
             isValid = false;
-            txtTitle.setError("You must enter a title");
+            txtTitle.setError(getString(R.string.error_title_required));
         }
         if (txtDescription.getText().toString().isEmpty()) {
             isValid = false;
-            txtDescription.setError("You must enter a description");
+            txtDescription.setError(getString(R.string.error_description_required));
         }
         if (txtDueDate.getText().toString().isEmpty()) {
             isValid = false;
-            txtDueDate.setError("You must select a date");
+            txtDueDate.setError(getString(R.string.error_date_required));
         }
         return isValid;
     }

@@ -32,9 +32,7 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
-        <receiver android:name=".AlarmReceiver"
-            android:exported="true"
-            android:permission="TODO" />
+
     </application>
 
 </manifest>

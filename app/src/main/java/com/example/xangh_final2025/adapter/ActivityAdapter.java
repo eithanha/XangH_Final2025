@@ -64,10 +64,14 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
         Activities activity = activities.get(position);
         holder.txtTitle.setText(activity.getTitle());
         holder.txtDescription.setText(activity.getDescription());
-        holder.txtDueDate.setText("Due: " + dateFormat.format(activity.getDate()));
         
-        // Set category name if available
-        String categoryName = "No Category";
+        // Format date
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault());
+        String formattedDate = dateFormat.format(activity.getDate());
+        holder.txtDueDate.setText(holder.itemView.getContext().getString(R.string.due_date_set, formattedDate));
+        
+        // Set category
+        String categoryName = holder.itemView.getContext().getString(R.string.no_category);
         if (activity.getCategoryId() > 0 && categories != null) {
             for (Category category : categories) {
                 if (category.getId() == activity.getCategoryId()) {
@@ -76,7 +80,11 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
                 }
             }
         }
-        holder.txtCategory.setText("Category: " + categoryName);
+        holder.txtCategory.setText(holder.itemView.getContext().getString(R.string.category_set, categoryName));
+        
+        // Set status
+        String statusText = activity.getStatus();
+        holder.txtStatus.setText(holder.itemView.getContext().getString(R.string.status_set, statusText));
 
         // Set click listeners
         holder.btnEdit.setOnClickListener(v -> {
@@ -102,6 +110,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
         TextView txtDescription;
         TextView txtDueDate;
         TextView txtCategory;
+        TextView txtStatus;
         ImageButton btnEdit;
         ImageButton btnDelete;
 
@@ -111,6 +120,7 @@ public class ActivityAdapter extends RecyclerView.Adapter<ActivityAdapter.ViewHo
             txtDescription = itemView.findViewById(R.id.descriptionText);
             txtDueDate = itemView.findViewById(R.id.dueDateText);
             txtCategory = itemView.findViewById(R.id.categoryText);
+            txtStatus = itemView.findViewById(R.id.statusText);
             btnEdit = itemView.findViewById(R.id.editButton);
             btnDelete = itemView.findViewById(R.id.deleteButton);
         }

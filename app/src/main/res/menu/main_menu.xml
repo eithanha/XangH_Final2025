@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+<!--    <item-->
+<!--        android:id="@+id/menu_add_activity"-->
+<!--        android:icon="@android:drawable/ic_input_add"-->
+<!--        android:title="@string/menu_add_activity"-->
+<!--        app:showAsAction="ifRoom" />-->
+        
     <item
-        android:id="@+id/action_manage_categories"
+        android:id="@+id/menu_manage_categories"
         android:icon="@drawable/baseline_category_24"
-        android:title="@string/action_manage_categories"
+        android:title="@string/menu_manage_categories"
         app:showAsAction="ifRoom" />
-   
+        
+
+        
+    <item
+        android:id="@+id/menu_exit"
+        android:title="@string/menu_exit"
+        app:showAsAction="never" />
 </menu> 
